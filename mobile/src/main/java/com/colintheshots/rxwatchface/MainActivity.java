@@ -20,6 +20,7 @@ import retrofit.RequestInterceptor;
 import retrofit.RestAdapter;
 import rx.Observable;
 import rx.Subscriber;
+import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 import rx.functions.Action1;
@@ -46,6 +47,7 @@ public class MainActivity extends Activity
     private GithubClient mGitHubClient;
     private CompositeSubscription mSubscriptions;
     private GoogleApiClient mGoogleApiClient;
+    private Subscription mWorker;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -77,8 +79,11 @@ public class MainActivity extends Activity
     @Override
     protected void onStop() {
         if (mSubscriptions!=null) {
-            Log.d(TAG, "Removing subscription in onStop.");
             mSubscriptions.unsubscribe();
+        }
+
+        if (mWorker!=null) {
+            mWorker.unsubscribe();
         }
         super.onStop();
     }
@@ -92,7 +97,7 @@ public class MainActivity extends Activity
         mSubscriptions.add(Observable.create(new Observable.OnSubscribe<String>() {
             @Override
             public void call(final Subscriber<? super String> subscriber) {
-                Schedulers.newThread().createWorker()
+                mWorker = Schedulers.newThread().createWorker()
                         .schedulePeriodically(new Action0() {
                             @Override
                             public void call() {
